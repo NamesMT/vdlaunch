@@ -147,7 +147,6 @@ int main() {
     attach_parent_console();
     printf("vdlaunch %s diagnostics\n", kVersion);
     printf("launcher      : %s\n", utf8(exe_path()).c_str());
-    vd::set_allow_unverified_slots(cfg.experimental_layout);
     bool ok = vd::init();
     printf("virtual desktops: %s\n", ok ? "available" : "UNAVAILABLE");
     if (ok) {

@@ -30,6 +30,9 @@ as `vdlaunch.ini.bak`. If any write fails it restores the original name.
 `vdlaunch.ini` sits beside the launcher. Every key is optional; the shortest
 working file is in [`../vdlaunch.ini.example`](../vdlaunch.ini.example).
 
+Keys written before any `[section]` header count as `[launch]`, so a one-line
+`desktop = 2` is enough on its own.
+
 ## `[launch]`
 
 | Key | Values | Default |
@@ -45,7 +48,6 @@ working file is in [`../vdlaunch.ini.example`](../vdlaunch.ini.example).
 | `args` | `all`, `none`, or a literal string | pass the caller's arguments |
 | `log` | also write to the attaching console | off |
 | `quiet` | suppress dialogs | off |
-| `experimental_layout` | try unverified slot tables on older Windows | off |
 | `env.NAME` | sets `NAME` | |
 | `env.un.NAME` | removes `NAME` (any value but `0`) | |
 

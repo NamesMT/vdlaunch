@@ -51,7 +51,18 @@ static void report_desktop(const char* path, HWND hwnd) {
       HRESULT ghr;
       wchar_t gs[40] = {0};
       char line[256];
-      ((PFN_iscur)(*(void***)vdm)[3])(vdm, hwnd, &on);
+      /* The shell can lag a move by a moment, so settle before reporting. */
+      {
+        int last = -1, stable = 0, t;
+        for (t = 0; t < 30; t++) {
+          int cur = -1;
+          ((PFN_iscur)(*(void***)vdm)[3])(vdm, hwnd, &cur);
+          if (cur == last) { if (++stable >= 3) break; }
+          else { stable = 0; last = cur; }
+          Sleep(100);
+        }
+        on = last;
+      }
       ghr = ((PFN_gid)(*(void***)vdm)[4])(vdm, hwnd, &g);
       if (SUCCEEDED(ghr) && g.Data1) {
         StringFromGUID2(&g, (LPOLESTR)gs, 40);

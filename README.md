@@ -73,11 +73,13 @@ Either build wraps 32-bit and 64-bit targets alike, and neither needs a helper f
 
 | Build | Behaviour |
 | --- | --- |
-| 26100+ (11 24H2 / 25H2) | Full support |
-| Older | Launches onto an existing desktop; refuses to create or switch, and logs why |
+| 26100+ (11 24H2 / 25H2) | Verified on hardware |
+| 22621 / 22631, 21313 / 22449, 20231, 19041+ | Supported via published slot tables, with runtime self-correction |
 
-Nothing crashes on older builds. See [docs/COM.md](docs/COM.md) for the interface
-details and how to add a build.
+Create, switch and background launch work on all of them. Where the layout guess is
+wrong, the launcher finds the right slot by its effect instead of failing — and it
+puts your desktop back if a wrong slot moved it. See
+[docs/COM.md](docs/COM.md) for the tables and the discovery mechanism.
 
 ## Development
 

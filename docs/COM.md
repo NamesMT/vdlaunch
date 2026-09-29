@@ -70,11 +70,34 @@ build number:
 newest-first rather than trusting a build number**. `init()` already does this and
 records the match in `EngineInfo::iid`.
 
-Only 26100/26200 has been verified slot-by-slot. Everything else gets the operations
-proven stable (enumerate, move to an existing desktop) and refuses create/switch/remove
-with a logged reason. `experimental_layout = true` unlocks the reference candidate
-tables, which are **unverified**: a wrong slot faults, so an effect check cannot make
-them safe.
+`src/desktop.cpp` carries a method table per revision (from pyvda) and picks one from
+the IID that answered. That alone is not enough, because the IID is not a reliable
+version signal — 21313 and 22449 share one but differ in layout.
+
+So the mutating operations do not trust the table. They try the detected slot first,
+then every other revision's value for that method, and accept one only by its effect:
+
+| Operation | Accepted when |
+| --- | --- |
+| create desktop | the desktop count grew |
+| switch desktop | the current desktop index changed |
+| remove desktop | the desktop count dropped |
+| move window | `MoveViewToDesktop` returned success — **stable at slot 4 on every revision** |
+
+This is what makes a wrong guess survivable rather than fatal, and it means the older
+rows do not need to be trusted blindly. Two mechanisms make it safe:
+
+1. **Fault guard.** MinGW has no `__try`, and a wrong slot is an access violation, not
+   an error. `src/guard.cpp` installs a vectored exception handler and `longjmp`s back,
+   so the call returns `E_UNEXPECTED` and the probe continues instead of the process
+   dying. Verified: a deliberately corrupted table is recovered from.
+2. **Side-effect recovery.** A rejected candidate can still have switched the desktop
+   (slot 9 *is* `SwitchDesktop` on 26100). `create_desktop` notes the current desktop
+   first and switches back if a probe moved the view.
+
+Only 26100/26200 has been checked by hand on real hardware. The older rows come from
+published tables and the self-correction above; nobody has run this on a Windows 10
+box yet, so treat that path as untested-but-guarded.
 
 ## Re-probing procedure
 

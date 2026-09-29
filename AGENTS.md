@@ -16,8 +16,8 @@ which is the source of truth when this file and the code disagree.
 - Never trust an `HRESULT` from the internal manager: a wrong slot **faults silently** or no-ops. Confirm by effect (desktop count, current desktop).
 - Acquire the manager with `IServiceProvider::QueryService`, never `CoCreateInstance` (returns `E_NOINTERFACE`).
 - Slots count `IUnknown`'s three entries, so the first own method is slot 3.
-- Only build 26100/26200 is verified slot-by-slot. Older revisions vary in IID **and** layout, so unverified tables stay behind `experimental_layout`.
-- Verify a new slot on real hardware before encoding it; a guessed slot crashes the wrapper, which is worse than refusing.
+- Revisions differ in IID **and** layout, and the IID is not a reliable version signal. Never trust a table alone: accept a mutating slot only by its effect, and go through `src/guard.cpp` so a wrong slot returns E_UNEXPECTED instead of killing the process.
+- A rejected candidate can still have side effects (switching the desktop); save the current desktop first and restore it after a failed probe.
 
 ## The creator
 

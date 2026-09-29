@@ -80,8 +80,8 @@ a PE is full of NUL bytes and `strstr` stops at the first one.
 
 - **No same-bitness helper.** Placement runs on explorer's side, so one binary wraps
   either bitness. See [COM.md](COM.md).
-- **Unverified slot tables are opt-in.** `experimental_layout` exists because a wrong
-  slot faults; default behaviour is graceful refusal instead of a crash.
+- **Mutating slots are accepted by effect, not by table.** A wrong slot faults, so the
+  guard turns it into `E_UNEXPECTED` and the next candidate is tried.
 - **Errors are logged, not just shown.** A silent wrapper is undebuggable, so every run
   appends to `vdlaunch.log` and `--diag`/`--print-config` explain the resolved state.
 - **`vdlaunch.log` is opened unconditionally at startup** so failures that happen while

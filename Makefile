@@ -14,7 +14,7 @@ CXX32   := $(MINGW32)g++
 WINDRES ?= $(MINGW64)windres
 
 SRCS       := src/main.cpp src/launch.cpp src/config.cpp src/ini.cpp src/desktop.cpp \
-              src/switches.cpp src/util.cpp
+              src/switches.cpp src/guard.cpp src/util.cpp
 CREATOR_SRCS := src/main.cpp src/creator.cpp src/util.cpp
 HDRS       := $(wildcard src/*.h)
 

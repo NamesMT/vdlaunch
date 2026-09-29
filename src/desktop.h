@@ -22,9 +22,6 @@ struct EngineInfo {
   bool         can_remove = false;   // verified slot for RemoveDesktop
 };
 const EngineInfo& engine_info();
-// Slot tables for revisions this build has never run against a real OS. Off by
-// default because a wrong slot faults rather than failing softly.
-void set_allow_unverified_slots(bool on);
 // Initializes COM and resolves the manager. Safe to call repeatedly.
 bool  init();
 void  shutdown();

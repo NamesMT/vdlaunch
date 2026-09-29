@@ -115,8 +115,6 @@ static void apply_section(Config& cfg, const IniSection& s) {
       else if (!t.empty()) { cfg.cwd = CwdMode::Custom; cfg.cwd_custom = wide(v); }
     } else if (k == "window_timeout" || k == "window_timeout_ms") {
       cfg.window_timeout_ms = std::max(0, atoi(v.c_str()));
-    } else if (k == "experimental_layout") {
-      cfg.experimental_layout = truthy(v, cfg.experimental_layout);
     } else if (k == "log") {
       cfg.log = truthy(v, cfg.log);
     } else if (k == "quiet") {
@@ -143,7 +141,10 @@ Config config_load(const std::wstring& command_line) {
     logf("config: no ini at %s; using defaults", cfg.ini_path.c_str());
   } else {
     cfg.loaded = true;
-    if (auto* base = ini.section("launch")) apply_section(cfg, *base);
+    // Keys before any [section] count as [launch], so a one-line
+    // "desktop = 2" file is not silently ignored.
+    for (auto& s : ini.sections)
+      if (s.name.empty() || iequals(s.name, "launch")) apply_section(cfg, s);
 
     // Later matching [apps.*] sections win.
     std::string tail = g_tail_set ? utf8(g_tail_override) : command_line_tail(command_line);
