@@ -47,16 +47,15 @@ Two shipped bugs to avoid repeating:
 Working directory defaults to the **target's** folder, matching how Windows resolves
 the working directory from an executable path.
 
-## Config schema
+## Config
 
-- Values expand `%EXE_DIR%`, `%EXE%`, `%TARGET%`, `%TARGET_DIR%`, `%CWD%`,
-  `%APPDATA%`, `%LOCALAPPDATA%`, `%DESKTOP%`, `%VARS%`.
-- `[apps.<glob>]` sections match this exe's name or the raw command line; **later
-  matches win** (base `[launch]` first).
-- `env.NAME=value` sets, `env.un.NAME=1` removes. Later definitions replace earlier
-  ones, and an unset name is emitted as `NAME=` (the CRT's `getenv` then returns NULL).
-- `desktop` is 1-based. `+n`/`-n` are relative, `new`, `current`, empty = new.
-  Out-of-range grows by creating desktops when `create = true`.
+Schema and key semantics: [CONFIG.md](CONFIG.md). Design points worth knowing here:
+
+- `[apps.<glob>]` sections match this exe's name or the raw command line; later
+  matches win, so `[launch]` is read first.
+- An unset name is emitted as `NAME=` rather than dropped, because that is what makes
+  the CRT's `getenv` return NULL for it.
+- Later `env.`/`env.un.` definitions replace earlier ones.
 
 ## Deliberate choices
 

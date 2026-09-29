@@ -1,56 +1,6 @@
-; vdlaunch - drop-in virtual desktop launcher
-; Copy next to vdlaunch.exe (or the renamed copy) as vdlaunch.ini
-
+; Copy next to the launcher as vdlaunch.ini
 [launch]
-; auto = launch _<this exe>.exe from the same folder
-target = auto
-
-; 1-based, matching the "Desktop 1" label in Task View.
-;  3       -> desktop 3
-;  +1      -> one desktop to the right
-;  -1      -> one desktop to the left
-;  current -> leave it where it is
-;  new     -> always a fresh desktop
-desktop = 2
-
-; false = launch silently in the background (default)
-; true  = also switch the visible desktop to the target
-switch = false
-
-; create the desktop when it does not exist yet
-create = true
-
-; auto = wait for console apps, detach GUI apps
-wait = auto
-
-; target = the real app's folder (default), inherit, or an explicit path
-cwd = target
-
-; Open the log console in addition to vdlaunch.log
-; log = true
-; quiet = false
-
-; Arguments: default passes every argument through unchanged.
-; args = all      -> also pass vdlaunch's own path
-; args = none     -> pass nothing
-; args = --flag   -> pass exactly this
-
-; Per-app environment:
-; env.MY_VAR = value
-; env.un.SOME_VAR = 1
-
-; Optional per-app overrides. The section name is glob-matched against this
-; exe's file name and against the raw command line; later matches win.
-[apps.chrome.exe]
-target = C:\Program Files\Google\Chrome\Application\chrome.exe
-desktop = 3
-
-[apps.*--new-window*]
-desktop = +1
-
-; Older Windows builds use a different internal interface revision, whose slot
-; layout this release has not been verified against. vdlaunch then keeps to the
-; operations proven stable there: launching onto a desktop that already exists.
-; Set this to true to try the reference slot tables for those builds. A wrong
-; slot faults rather than failing softly, so test before trusting it.
-; experimental_layout = false
+target  = auto   ; auto = _<this exe>.exe in the same folder
+desktop = 2      ; 1-based, so this is "Desktop 2" in Task View
+switch  = false  ; launch in the background without leaving your desktop
+create  = true   ; create the desktop if it does not exist

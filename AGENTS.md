@@ -7,7 +7,7 @@ which is the source of truth when this file and the code disagree.
 
 - Build: `make` → `dist/vdlaunch64.exe`, `vdlaunch32.exe`. `make test` builds and runs the suite.
 - Two binaries, same features, **no helper files**: placement runs on explorer's side, so either bitness wraps either target.
-- Layout: `src/*.cpp`, tests in `test/run.sh`, reverse-engineering probes in `tools/`, depth in `docs/`.
+- Layout: `src/*.cpp`, tests in `test/run.sh`, probes in `tools/`, depth in `docs/` (keys: [CONFIG.md](docs/CONFIG.md)).
 - The engine's slot numbers live only in `src/desktop.cpp`; never duplicate them elsewhere.
 
 ## Windows COM (see [docs/COM.md](docs/COM.md))
