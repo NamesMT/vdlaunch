@@ -6,7 +6,8 @@ which is the source of truth when this file and the code disagree.
 ## Essentials
 
 - Build: `make` → `dist/vdlaunch64.exe`, `vdlaunch32.exe`. `make test` builds and runs the suite.
-- Two binaries, same features, **no helper files**: placement runs on explorer's side, so either bitness wraps either target.
+- Three binaries: `vdlaunch64/32.exe` (the launcher) and `vdlaunchCreator.exe` (wrap-in-place tool).
+- Launchers need **no helper files**: placement runs on explorer's side, so either bitness wraps either target. The creator embeds both launchers as RCDATA and picks by the target's PE machine.
 - Layout: `src/*.cpp`, tests in `test/run.sh`, probes in `tools/`, depth in `docs/` (keys: [CONFIG.md](docs/CONFIG.md)).
 - The engine's slot numbers live only in `src/desktop.cpp`; never duplicate them elsewhere.
 
@@ -17,6 +18,13 @@ which is the source of truth when this file and the code disagree.
 - Slots count `IUnknown`'s three entries, so the first own method is slot 3.
 - Only build 26100/26200 is verified slot-by-slot. Older revisions vary in IID **and** layout, so unverified tables stay behind `experimental_layout`.
 - Verify a new slot on real hardware before encoding it; a guessed slot crashes the wrapper, which is worse than refusing.
+
+## The creator
+
+- It renames a user's app, so keep the order: validate → stage the launcher → rename → write the ini → roll back on any failure.
+- Match the `vdlaunch-wrapper` marker with `std::string::find`, never `strstr` (PE files are full of NULs).
+- Refuse to wrap a wrapper, and refuse to clobber an existing `_name.exe` without `--force` — that backup is the user's real app.
+- Blank prompt answers omit the key so the launcher default applies.
 
 ## Behaviour you must not regress
 

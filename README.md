@@ -12,12 +12,28 @@ vdlaunch64.exe   ->  app.exe           the wrapper
 vdlaunch.ini                           your desktop choice
 ```
 
-## Set up (2 minutes)
+## Set up
 
-1. Download `vdlaunch64.exe` and `vdlaunch.ini.example` from [Releases](../../releases).
-2. In your app's folder, rename `app.exe` → `_app.exe`.
+**Easiest** — put `vdlaunchCreator.exe` in the app's folder and run it:
+
+```
+Name your program (without .exe): myapp
+Desktop to launch on [2, +1, -1, current, new, blank = new]: 2
+Switch the visible desktop first? [y/N]: n
+Create the desktop if it does not exist? [Y/n]:
+Wait for the app to exit? [auto/always/never]: 
+```
+
+It renames `myapp.exe` → `_myapp.exe`, writes the matching-bitness launcher as
+`myapp.exe`, and writes `vdlaunch.ini`. Blank answers keep the launcher defaults.
+Add `--dry-run` to preview, `-y` to skip confirmation.
+
+**Manual** — no tooling, four steps:
+
+1. Download `vdlaunch64.exe` from [Releases](../../releases).
+2. Rename `app.exe` → `_app.exe`.
 3. Copy `vdlaunch64.exe` in and rename it to `app.exe`.
-4. Copy `vdlaunch.ini.example` in as `vdlaunch.ini`. It already says "Desktop 2":
+4. Optional: `vdlaunch.ini` beside it chooses the desktop.
 
 ```ini
 [launch]
@@ -26,8 +42,6 @@ desktop = 2      ; 1-based, so this is "Desktop 2" in Task View
 switch  = false  ; launch in the background without leaving your desktop
 create  = true   ; create the desktop if it does not exist
 ```
-
-Launch the app the way you always do. It opens on Desktop 2; you stay where you are.
 
 No ini at all also works — it falls back to `_app.exe` on the current desktop.
 
@@ -49,6 +63,7 @@ overrides, cwd and argument modes — is in **[docs/CONFIG.md](docs/CONFIG.md)**
 
 | File | Use |
 | --- | --- |
+| `vdlaunchCreator.exe` | Wrap an app in place, interactively |
 | `vdlaunch64.exe` | Use this unless you have a reason not to |
 | `vdlaunch32.exe` | Same features, x86 host |
 

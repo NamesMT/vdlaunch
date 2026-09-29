@@ -18,6 +18,10 @@ Artifacts:
 | --- | --- |
 | `-mwindows` | Real launcher: no console flash for GUI apps |
 | `-mconsole` twins | **Only** so the harness can capture stdout/stderr |
+| `vdlaunchCreator.exe` | `-mconsole` on purpose: it is a prompt-driven tool |
+
+`src/creator.rc` embeds `dist/vdlaunch64.exe` and `dist/vdlaunch32.exe` as RCDATA, so the
+creator **must be built after both launchers** — the Makefile encodes that dependency.
 
 The twins are the same objects, linked differently — never ship them.
 

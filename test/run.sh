@@ -66,6 +66,14 @@ run_scenario() {
 
 winpath() { local p="$1"; printf '%s' "$WORK_WIN\\${p//\//\\}"; }
 
+# run_creator <dir> <args...> -> creator exit code (console build, so synchronous)
+run_creator() {
+  local dir="$1"; shift
+  local sub="${dir#$WORK_DIR/}"
+  ( cd "$dir" && cmd.exe /c "cd /d $WORK_WIN\\$sub && vdlaunchCreator.exe $*" ) >/dev/null 2>&1
+  echo $?
+}
+
 diag() { ( cd "$WORK_DIR" && cmd.exe /c "cd /d $WORK_WIN && vdlaunch64c.exe --diag" 2>&1 | tr -d '\r' ); }
 diag_count()   { diag | sed -n 's/^desktop count : //p' | tr -d ' '; }
 diag_current() { diag | sed -n 's/^current       : //p' | tr -d ' '; }
@@ -86,6 +94,7 @@ fi
 
 cp "$ROOT/dist-test/vdlaunch64c.exe" "$WORK_DIR/"
 cp "$ROOT/dist-test/vdlaunch32c.exe" "$WORK_DIR/"
+cp "$ROOT/dist/vdlaunchCreator.exe" "$WORK_DIR/"
 mkdir -p "$WORK_DIR/bin64" "$WORK_DIR/bin32"
 cp $MOCKS/mock64.exe "$WORK_DIR/bin64/mock.exe"
 cp $MOCKS/mock32.exe "$WORK_DIR/bin32/mock.exe"
@@ -395,6 +404,84 @@ EOF
   sleep 1
   check "8f.1 desktop count restored" "$(diag_count)" "$COUNTV"
 fi
+
+# ---------------------------------------------------------------- 9
+echo
+echo "[9] vdlaunchCreator: wrap an app in place"
+fresh s9
+cp "$ROOT/dist/vdlaunchCreator.exe" "$WORK_DIR/s9/"
+cp "$WORK_DIR/bin64/mock.exe"       "$WORK_DIR/s9/chat.exe"
+
+# 9a: dry run must change nothing
+run_creator "$WORK_DIR/s9" "--name chat --desktop 2 -y --dry-run" >/dev/null
+[ -f "$WORK_DIR/s9/_chat.exe" ] && bad "9a.1 dry run renamed nothing" "_chat.exe exists" || ok "9a.1 dry run renamed nothing"
+
+# 9b: real wrap
+TESTTAG=s9 write_runner "$WORK_DIR/s9" "chat.exe" "$(winpath 's9/o.txt')" hi
+# the runner must be written after wrapping (chat.exe becomes the launcher)
+run_creator "$WORK_DIR/s9" "--name chat --desktop 2 --switch false --create true -y" >/dev/null
+[ -f "$WORK_DIR/s9/_chat.exe" ] && ok "9b.1 original renamed to _chat.exe" || bad "9b.1 original renamed" "missing"
+[ -f "$WORK_DIR/s9/chat.exe" ]  && ok "9b.2 wrapper written as chat.exe"   || bad "9b.2 wrapper written" "missing"
+INI=$(tr -d '\r' < "$WORK_DIR/s9/vdlaunch.ini" 2>/dev/null)
+contains "9b.3 ini targets the backup"   "$INI" "target = _chat.exe"
+contains "9b.4 ini records the desktop"  "$INI" "desktop = 2"
+contains "9b.5 wrapper is the x64 build" "$(python3 -c "
+import struct,sys
+try:
+    d=open(r'$WORK_DIR/s9/chat.exe','rb').read(); pe=struct.unpack_from('<I',d,0x3c)[0]
+    print('x64' if struct.unpack_from('<H',d,pe+4)[0]==0x8664 else 'x86')
+except Exception: print('none')")" "x64"
+
+# 9c: the wrapped app actually runs and receives arguments
+TESTTAG=s9 write_runner "$WORK_DIR/s9" "chat.exe" "$(winpath 's9/o.txt')" hi there
+run_scenario "$WORK_DIR/s9" >/dev/null
+OUT=$(tr -d '\r' < "$WORK_DIR/s9/o.txt" 2>/dev/null)
+contains "9c.1 wrapped app runs"          "$OUT" "=== s9 ==="
+contains "9c.2 arguments still pass through" "$OUT" "arg1=[hi]"
+contains "9c.3 argv[0] is the real app"   "$OUT" "_chat.exe"
+
+# 9d: refuse to double-wrap
+RC=$(run_creator "$WORK_DIR/s9" "--name chat --desktop 3 -y")
+check "9d.1 refuses to wrap a wrapper" "$([ "${RC:-0}" -ne 0 ] && echo yes || echo no)" "yes"
+
+# 9e: omit switch/create/wait -> keys absent, launcher defaults apply
+fresh s9e
+cp "$ROOT/dist/vdlaunchCreator.exe" "$WORK_DIR/s9e/"
+cp "$WORK_DIR/bin64/mock.exe"       "$WORK_DIR/s9e/app.exe"
+run_creator "$WORK_DIR/s9e" "--name app --desktop 4 -y" >/dev/null
+INI=$(tr -d '\r' < "$WORK_DIR/s9e/vdlaunch.ini" 2>/dev/null)
+contains "9e.1 omitted keys stay out of the ini" "$INI" "desktop = 4"
+check    "9e.2 switch omitted"  "$(printf '%s' "$INI" | grep -c '^switch')" "0"
+check    "9e.3 create omitted"  "$(printf '%s' "$INI" | grep -c '^create')" "0"
+check    "9e.4 wait omitted"    "$(printf '%s' "$INI" | grep -c '^wait')"   "0"
+
+# 9f: a 32-bit target gets the 32-bit launcher
+fresh s9f
+cp "$ROOT/dist/vdlaunchCreator.exe" "$WORK_DIR/s9f/"
+cp "$WORK_DIR/bin32/mock.exe"       "$WORK_DIR/s9f/app32.exe"
+run_creator "$WORK_DIR/s9f" "--name app32 --desktop +1 -y" >/dev/null
+check "9f.1 x86 target gets the x86 launcher" "$(python3 -c "
+import struct
+d=open(r'$WORK_DIR/s9f/app32.exe','rb').read(); pe=struct.unpack_from('<I',d,0x3c)[0]
+print('x86' if struct.unpack_from('<H',d,pe+4)[0]==0x14c else 'x64')")" "x86"
+
+# 9g: an existing ini is preserved as .bak
+fresh s9g
+cp "$ROOT/dist/vdlaunchCreator.exe" "$WORK_DIR/s9g/"
+cp "$WORK_DIR/bin64/mock.exe"       "$WORK_DIR/s9g/app.exe"
+printf 'desktop = 9\r\n' > "$WORK_DIR/s9g/vdlaunch.ini"
+run_creator "$WORK_DIR/s9g" "--name app --desktop 2 -y" >/dev/null
+contains "9g.1 previous ini kept as .bak" "$(tr -d '\r' < "$WORK_DIR/s9g/vdlaunch.ini.bak" 2>/dev/null)" "desktop = 9"
+contains "9g.2 new ini written"           "$(tr -d '\r' < "$WORK_DIR/s9g/vdlaunch.ini" 2>/dev/null)" "desktop = 2"
+
+# 9h: a missing program is reported, not guessed
+RC=$(run_creator "$WORK_DIR/s9g" "--name nosuchapp --desktop 2 -y")
+check "9h.1 missing program refused" "$([ "${RC:-0}" -ne 0 ] && echo yes || echo no)" "yes"
+
+# Section 9 launches the wrapped app, which may create a desktop; put it back.
+( cd "$WORK_DIR" && cmd.exe /c "cd /d $WORK_WIN && vdlaunch64c.exe --cleanup-desktops 1" ) >/dev/null 2>&1
+sleep 1
+check "9i.1 desktop count restored after creator tests" "$(diag_count)" "1"
 
 # ---------------------------------------------------------------- summary
 echo

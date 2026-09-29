@@ -10,6 +10,7 @@
 | `src/ini.cpp` | Minimal ini reader (sections, `key=value`, `;`/`#` comments) |
 | `src/launch.cpp` | Builds the command line and environment, `CreateProcessW`, window placement |
 | `src/desktop.cpp` | The whole COM engine — see [COM.md](COM.md) |
+| `src/creator.cpp` | `vdlaunchCreator.exe`: prompts, renames in place, writes the ini |
 | `src/util.cpp` | Paths, UTF-8, logging, glob, `windows_build()` |
 
 ## Argument handling (the part most easily broken)
@@ -56,6 +57,24 @@ Schema and key semantics: [CONFIG.md](CONFIG.md). Design points worth knowing he
 - An unset name is emitted as `NAME=` rather than dropped, because that is what makes
   the CRT's `getenv` return NULL for it.
 - Later `env.`/`env.un.` definitions replace earlier ones.
+
+## The creator (`vdlaunchCreator.exe`)
+
+One binary for either target bitness: `src/creator.rc` embeds both launcher builds as
+RCDATA (ids 1001/1002) and the creator picks by the target's PE machine field.
+
+It mutates a user's app folder, so the order of operations is deliberate:
+
+1. Validate everything (target exists, name is sane) before touching anything.
+2. Refuse if the target already carries the `vdlaunch-wrapper` marker, or if
+   `_name.exe` exists (unless `--force`) — a second wrap would overwrite the backup.
+3. **Extract the launcher to a staging file first**, so an extraction failure leaves
+   the folder untouched.
+4. Rename `name.exe` → `_name.exe`, then move staging into place.
+5. Write the ini last; any failure rolls the rename back.
+
+`looks_like_launcher` scans for the marker with `std::string::find`, **not `strstr`** —
+a PE is full of NUL bytes and `strstr` stops at the first one.
 
 ## Deliberate choices
 

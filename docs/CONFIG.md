@@ -1,5 +1,32 @@
 # Config reference
 
+## Creating a config (vdlaunchCreator.exe)
+
+Put the creator in the app's folder and run it. It prompts for the program name, desktop
+and the optional keys, then renames `name.exe` → `_name.exe`, writes the matching-bitness
+launcher as `name.exe`, and writes `vdlaunch.ini`. Blank answers omit the key, so the
+launcher default applies.
+
+```sh
+vdlaunchCreator.exe --name myapp --desktop 2 --switch false --create true -y
+vdlaunchCreator.exe --name myapp --desktop +1 --dry-run    # preview only
+```
+
+| Switch | Effect |
+| --- | --- |
+| `--name <name>` | program name without `.exe` (prompted if absent) |
+| `--desktop <spec>` | `2`, `+1`, `-1`, `current`, `new` |
+| `--switch <bool>` / `--create <bool>` | as in the ini; omit to leave the key out |
+| `--wait <mode>` | `auto`, `always`, `never` |
+| `--dir <path>` | folder to work in (default: this exe's folder) |
+| `--dry-run` | show the plan, change nothing |
+| `--force` | overwrite an existing `_name.exe` |
+| `-y`, `--yes` | skip the confirmation prompt |
+
+Refuses to wrap an app that is already a launcher, and keeps a previous `vdlaunch.ini`
+as `vdlaunch.ini.bak`. If any write fails it restores the original name.
+
+
 `vdlaunch.ini` sits beside the launcher. Every key is optional; the shortest
 working file is in [`../vdlaunch.ini.example`](../vdlaunch.ini.example).
 

@@ -1,6 +1,8 @@
 #include "config.h"
+#include "creator.h"
 #include "desktop.h"
 #include "switches.h"
+#include "version.h"
 #include "launch.h"
 #include "util.h"
 #include <windows.h>
@@ -10,8 +12,11 @@
 
 using namespace vd;
 
-static const char* kVersion = "0.1.0";
+static const char* kVersion = VDLAUNCH_VERSION;
+// Lets vdlaunchCreator refuse to wrap a wrapper (see looks_like_launcher).
+const char kWrapperMarker[] = "vdlaunch-wrapper";
 
+#if !VDLAUNCH_CREATOR
 static void attach_parent_console() {
   if (GetConsoleWindow()) return;
   if (AttachConsole(ATTACH_PARENT_PROCESS)) {
@@ -34,7 +39,41 @@ static void print_usage() {
   fprintf(stderr, "  --log            open the log console\n");
   fprintf(stderr, "  --version, --help\n");
 }
+#endif
 
+#if VDLAUNCH_CREATOR
+int main() {
+  int argc = 0;
+  LPWSTR* argv = CommandLineToArgvW(GetCommandLineW(), &argc);
+  CreatorOptions opt;
+  for (int i = 1; argv && i < argc; i++) {
+    std::wstring a = argv[i];
+    auto next = [&](std::wstring* out) { if (i + 1 < argc) { *out = argv[++i]; return true; } return false; };
+    std::wstring v;
+    if (iequalsw(a, L"--name") && next(&v)) opt.name = v;
+    else if (iequalsw(a, L"--desktop") && next(&v)) opt.desktop = utf8(v);
+    else if (iequalsw(a, L"--dir") && next(&v)) opt.dir = v;
+    else if (iequalsw(a, L"--wait") && next(&v)) opt.wait = lower(utf8(v));
+    else if (iequalsw(a, L"--switch") && next(&v)) {
+      std::string s = lower(utf8(v));
+      opt.have_switch = true;
+      opt.switch_to = (s == "1" || s == "true" || s == "yes" || s == "on");
+    }
+    else if (iequalsw(a, L"--create") && next(&v)) {
+      std::string s = lower(utf8(v));
+      opt.have_create = true;
+      opt.create = (s == "1" || s == "true" || s == "yes" || s == "on");
+    }
+    else if (iequalsw(a, L"--dry-run")) opt.dry_run = true;
+    else if (iequalsw(a, L"--force")) opt.force = true;
+    else if (iequalsw(a, L"-y") || iequalsw(a, L"--yes")) opt.assume_yes = true;
+    else if (iequalsw(a, L"-h") || iequalsw(a, L"--help")) { attach_parent_console_creator(); creator_usage(); return 0; }
+    else if (iequalsw(a, L"--version")) { attach_parent_console_creator(); printf("vdlaunchCreator %s\n", kVersion); return 0; }
+    else { printf("Unknown option: %ls (try --help)\n", a.c_str()); return 2; }
+  }
+  return creator_run(opt);
+}
+#else
 int main() {
   int argc = 0;
   LPWSTR* argv = CommandLineToArgvW(GetCommandLineW(), &argc);
@@ -67,6 +106,7 @@ int main() {
          "x86"
 #endif
     );
+    logf("marker=%s", kWrapperMarker);
     log_line("config: " + config_summary(cfg));
   }
 
@@ -144,3 +184,4 @@ int main() {
   }
   return rc;
 }
+#endif

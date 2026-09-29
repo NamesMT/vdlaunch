@@ -18,6 +18,7 @@ environment and, in GUI mode, which desktop its window is on.
 | 6 | cross-bitness | x64 launcher runs both 32- and 64-bit targets |
 | 7 | error handling | missing target exits non-zero; self-target refused |
 | 8 | desktop placement | the real COM behaviour; skips without a manager |
+| 9 | vdlaunchCreator | dry run, wrap, passthrough after wrapping, double-wrap refusal, key omission, bitness pick, ini backup, missing app |
 
 Section 8 detail:
 
