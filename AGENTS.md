@@ -1,43 +1,42 @@
 # AGENTS.md
 
-Rules for agents working in this repo.
+Guardrails for working in this repo. Depth lives in [`docs/`](docs/README.md),
+which is the source of truth when this file and the code disagree.
 
-- Build with `make` (mingw-w64 cross-compile from Linux/WSL). `make console` adds stdout-capable twins for scripting; `make test` runs the suite.
-- The Makefile tracks `src/*.h`, but enum/struct changes still warrant `make clean` when a build looks stale.
-- Never trust an `HRESULT` from the internal COM manager: a wrong vtable slot faults or silently no-ops. Verify by effect (desktop count changed, window moved).
-- The launcher talks to explorer, not to the target, so it places windows of any bitness. Keep it that way: no same-bitness helper.
-- Vtable slots in `src/desktop.cpp` are validated for Windows 11 build 26100/26200 only; unverified slot tables stay behind `experimental_layout` because a wrong slot faults. Re-probe with `tools/probe_*.cpp` on any other build before editing them.
-- `test/run.sh` drives the real Windows host through cmd.exe interop and needs a live desktop session; it restores the desktop count when it finishes.
-- Keep passthrough byte-exact: never re-quote or reorder the wrapped app's arguments.
-MDEOF
-cat > tools/README.md <<'EOF'
-# tools
+## Essentials
 
-Probe programs used to reverse-engineer the internal virtual-desktop COM API on a
-live Windows host. Each one validates behaviour by effect, not by `HRESULT`.
+- Build: `make` → `dist/vdlaunch64.exe`, `vdlaunch32.exe`. `make test` builds and runs the suite.
+- Two binaries, same features, **no helper files**: placement runs on explorer's side, so either bitness wraps either target.
+- Layout: `src/*.cpp`, tests in `test/run.sh`, reverse-engineering probes in `tools/`, depth in `docs/`.
+- The engine's slot numbers live only in `src/desktop.cpp`; never duplicate them elsewhere.
 
-Build any of them with:
+## Windows COM (see [docs/COM.md](docs/COM.md))
 
-```sh
-x86_64-w64-mingw32-g++ -std=c++17 -O2 -o probe.exe probe_x.cpp -lole32 -loleaut32 -luuid
-```
+- Never trust an `HRESULT` from the internal manager: a wrong slot **faults silently** or no-ops. Confirm by effect (desktop count, current desktop).
+- Acquire the manager with `IServiceProvider::QueryService`, never `CoCreateInstance` (returns `E_NOINTERFACE`).
+- Slots count `IUnknown`'s three entries, so the first own method is slot 3.
+- Only build 26100/26200 is verified slot-by-slot. Older revisions vary in IID **and** layout, so unverified tables stay behind `experimental_layout`.
+- Verify a new slot on real hardware before encoding it; a guessed slot crashes the wrapper, which is worse than refusing.
 
-Run from a Windows-visible path (not a UNC `\\wsl.localhost` path) so `cmd.exe`
-can execute it.
+## Behaviour you must not regress
 
-| Probe | Question it answers |
-| --- | --- |
-| `probe_com.cpp` | Can `ImmersiveShell` be activated, and does CLSID-as-IID ever work? |
-| `probe_move.cpp` | Does the internal manager enumerate desktops, and which slots answer? |
-| `probe_slots.cpp` | Which vtable slots are callable with which signature? |
-| `probe_acq.cpp` | Which acquisition path yields a usable manager (vs. a proxy)? |
-| `probe_isolate.cpp` | Per-slot probing with crash isolation, so faults don't hide results |
-| `probe_avc.cpp` | Which slot is `IApplicationViewCollection::GetViewForHwnd`? |
-| `probe_final.cpp` | Which slot actually switches desktops (`SwitchDesktop`)? |
-| `probe_mvw.cpp` | Which slot actually moves a foreign window (`MoveViewToDesktop`)? |
-| `probe_mk.cpp` | Which slot creates a desktop (`CreateDesktopW`)? |
-| `probe_rm.cpp` | Which slot removes a desktop (`RemoveDesktop`)? |
-| `probe_bg.cpp` | Does a background launch stay on the user's desktop? |
-| `probe_state.cpp` | Current desktop list/state snapshot |
+- Passthrough is byte-exact: never re-quote, reorder or re-encode the app's arguments.
+- Default is a silent background launch (`switch = false`); the user must not be dragged to the target desktop.
+- `desktop` is 1-based; missing indexes are created when `create = true`.
+- A failure must degrade, not crash: log the reason, launch anyway, and keep `--diag`/`--print-config` honest.
 
-Results are recorded in `src/desktop.cpp` and the README's "How it works" section.
+## Building and testing (see [docs/BUILD-AND-TEST.md](docs/BUILD-AND-TEST.md))
+
+- mingw-w64 cross-compile from Linux/WSL; `make console` adds stdout-capable twins used only by tests.
+- `cmd.exe` cannot take a WSL working directory — always `cd /d C:\…` inside the call, and keep test files under `/mnt/c/`.
+- GUI-subsystem exes do not block `cmd`, so use `start /wait` or a console twin when you need output.
+- Prefer a `.bat` wrapper over chained `set "V=x"&& prog` one-liners; the trailing space corrupts the value.
+- The suite drives the real host's desktops: restore the count before finishing, and set `quiet = true` so a refusal is not a modal hang.
+- Mock builds live in `.mocks/` (gitignored); do not rely on `/tmp`, it does not survive.
+- Test only what can fail: don't add assertions that pass whether or not the code works.
+
+## Editing
+
+- Minimal comments: only non-obvious intent, no narration.
+- The Makefile tracks `src/*.h`; if a build still looks stale, `make clean`.
+- When you learn a new COM constant or host gotcha, update `docs/` — an empty-context agent should not have to rediscover it.

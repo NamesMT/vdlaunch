@@ -225,6 +225,12 @@ experimental_layout = true   ; older builds only, test before trusting
 - Background mode needs the app to open a window within `window_timeout`; single-instance apps are better served by `switch = true`.
 - Placement is per-window, so an app that hands off to an already-running process is better served by `switch = true`.
 
+## For contributors and agents
+
+`AGENTS.md` holds the short guardrails; [`docs/`](docs/README.md) holds the depth —
+the COM contract and re-probing procedure, build/test host gotchas, the scenario map,
+and the design notes.
+
 ## Credits
 
 Built on the shoulders of [eksime/VDesk](https://github.com/eksime/VDesk) — the
