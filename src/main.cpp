@@ -1,4 +1,3 @@
-#include "auto_dispatch.h"
 #include "config.h"
 #include "desktop.h"
 #include "switches.h"
@@ -62,14 +61,10 @@ int main() {
   }
   if (cfg.log || cli.log || cli.print_config || cli.diag) {
     logf("--- vdlaunch %s pid=%lu arch=%s ---", kVersion, (unsigned long)GetCurrentProcessId(),
-#if VDLAUNCH_AUTO
-         "auto"
-#else
-#  ifdef _WIN64
+#ifdef _WIN64
          "x64"
-#  else
+#else
          "x86"
-#  endif
 #endif
     );
     log_line("config: " + config_summary(cfg));
@@ -119,7 +114,6 @@ int main() {
       printf("current       : %d\n", vd::current_index());
       for (auto& d : vd::list()) printf("  desktop %d : %s\n", d.index, utf8(d.id).c_str());
     }
-    printf("target machine: 0x%04X\n", pe_machine(cfg.target));
     vd::shutdown();
     return ok ? 0 : 1;
   }
@@ -132,9 +126,6 @@ int main() {
                 L"vdlaunch", MB_OK | MB_ICONWARNING | MB_SETFOREGROUND);
     return 2;
   }
-
-  int dispatched = auto_dispatch(cfg.target, raw);
-  if (dispatched >= 0) return dispatched;
 
   int rc = run(cfg, raw);
   if (cli.log) {

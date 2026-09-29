@@ -1,18 +1,19 @@
 # vdlaunch - drop-in virtual desktop launcher
 #
-# Builds three artifacts:
-#   vdlaunch64.exe  x86-64 launcher
-#   vdlaunch32.exe  x86 launcher
-#   vdlaunch.exe    auto dispatcher (ships next to both of the above)
+# Two artifacts, same feature set:
+#   vdlaunch64.exe  x64 targets (the usual pick)
+#   vdlaunch32.exe  x86 host; also wraps 64-bit targets
+#
+# The desktop calls all go through explorer's COM server and are cross-process,
+# so neither build needs a same-bitness helper.
 
 MINGW64 ?= x86_64-w64-mingw32-
 MINGW32 ?= i686-w64-mingw32-
 CXX64   := $(MINGW64)g++
 CXX32   := $(MINGW32)g++
-WINDRES ?= $(MINGW64)windres
 
 SRCS    := src/main.cpp src/launch.cpp src/config.cpp src/ini.cpp src/desktop.cpp \
-           src/auto_dispatch.cpp src/switches.cpp src/util.cpp
+           src/switches.cpp src/util.cpp
 HDRS    := $(wildcard src/*.h)
 
 CXXFLAGS := -std=c++17 -O2 -Wall -Wextra -Wno-unused-parameter -fno-exceptions -fno-rtti
@@ -25,35 +26,28 @@ TESTDIST := dist-test
 
 .PHONY: all clean dist test console
 
-all: $(DIST)/vdlaunch64.exe $(DIST)/vdlaunch32.exe $(DIST)/vdlaunch.exe
+all: $(DIST)/vdlaunch64.exe $(DIST)/vdlaunch32.exe
 
-# console-subsystem twins used by the test harness so stdout is capturable
+# console-subsystem twins so the test harness can capture stdout
 console: $(TESTDIST)/vdlaunch64c.exe $(TESTDIST)/vdlaunch32c.exe
 
 $(BUILD) $(DIST) $(TESTDIST):
 	@mkdir -p $@
 
 $(BUILD)/%.64.o: src/%.cpp $(HDRS) | $(BUILD)
-	$(CXX64) $(CXXFLAGS) -DVDLAUNCH_AUTO=0 -c $< -o $@
+	$(CXX64) $(CXXFLAGS) -c $< -o $@
 
 $(BUILD)/%.32.o: src/%.cpp $(HDRS) | $(BUILD)
-	$(CXX32) $(CXXFLAGS) -DVDLAUNCH_AUTO=0 -c $< -o $@
+	$(CXX32) $(CXXFLAGS) -c $< -o $@
 
-$(BUILD)/%.auto.o: src/%.cpp $(HDRS) | $(BUILD)
-	$(CXX64) $(CXXFLAGS) -DVDLAUNCH_AUTO=1 -c $< -o $@
-
-OBJ64  := $(patsubst src/%.cpp,$(BUILD)/%.64.o,$(SRCS))
-OBJ32  := $(patsubst src/%.cpp,$(BUILD)/%.32.o,$(SRCS))
-OBJAUTO:= $(patsubst src/%.cpp,$(BUILD)/%.auto.o,$(SRCS))
+OBJ64 := $(patsubst src/%.cpp,$(BUILD)/%.64.o,$(SRCS))
+OBJ32 := $(patsubst src/%.cpp,$(BUILD)/%.32.o,$(SRCS))
 
 $(DIST)/vdlaunch64.exe: $(OBJ64) | $(DIST)
 	$(CXX64) $(LDFLAGS) $^ -o $@ $(LIBS)
 
 $(DIST)/vdlaunch32.exe: $(OBJ32) | $(DIST)
 	$(CXX32) $(LDFLAGS) $^ -o $@ $(LIBS)
-
-$(DIST)/vdlaunch.exe: $(OBJAUTO) | $(DIST)
-	$(CXX64) $(LDFLAGS) $^ -o $@ $(LIBS)
 
 $(TESTDIST)/vdlaunch64c.exe: $(OBJ64) | $(TESTDIST)
 	$(CXX64) -static -s -mconsole $^ -o $@ $(LIBS)

@@ -4,3 +4,4 @@ dist-test/
 *.o
 *.exe
 !dist/*.exe
+.mocks/

@@ -9,6 +9,7 @@
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+MOCKS="$ROOT/.mocks"
 WORK_DIR="/mnt/c/Users/Administrator/Desktop/vdtest"
 WORK_WIN='C:\Users\Administrator\Desktop\vdtest'
 
@@ -76,18 +77,18 @@ if [ ! -x "$ROOT/dist-test/vdlaunch64c.exe" ]; then
   echo "building test binaries..." >&2
   (cd "$ROOT" && make console) || { red "build failed"; exit 1; }
 fi
-if [ ! -f /tmp/mt/mock64.exe ]; then
+if [ ! -f $MOCKS/mock64.exe ]; then
   ( cd "$ROOT/test" && \
-    x86_64-w64-mingw32-gcc -std=c11 -O2 -o /tmp/mt/mock64.exe mock.c -lole32 -loleaut32 -luuid && \
-    i686-w64-mingw32-gcc   -std=c11 -O2 -o /tmp/mt/mock32.exe mock.c -lole32 -loleaut32 -luuid ) \
+    x86_64-w64-mingw32-gcc -std=c11 -O2 -o $MOCKS/mock64.exe mock.c -lole32 -loleaut32 -luuid && \
+    i686-w64-mingw32-gcc   -std=c11 -O2 -o $MOCKS/mock32.exe mock.c -lole32 -loleaut32 -luuid ) \
     || { red "mock build failed"; exit 1; }
 fi
 
 cp "$ROOT/dist-test/vdlaunch64c.exe" "$WORK_DIR/"
 cp "$ROOT/dist-test/vdlaunch32c.exe" "$WORK_DIR/"
 mkdir -p "$WORK_DIR/bin64" "$WORK_DIR/bin32"
-cp /tmp/mt/mock64.exe "$WORK_DIR/bin64/mock.exe"
-cp /tmp/mt/mock32.exe "$WORK_DIR/bin32/mock.exe"
+cp $MOCKS/mock64.exe "$WORK_DIR/bin64/mock.exe"
+cp $MOCKS/mock32.exe "$WORK_DIR/bin32/mock.exe"
 
 echo "vdlaunch test harness ($WORK_DIR)"
 echo
@@ -217,30 +218,31 @@ contains "5.2 args=<literal> replaces them" "$OUT" "arg1=[--forced]"
 
 # ---------------------------------------------------------------- 6
 echo
-echo "[6] auto dispatcher against a 32-bit target"
+echo "[6] cross-bitness: one launcher, either target architecture"
 fresh s6
-# prog32.exe is the auto build renamed over the app; vdlaunch32.exe is the
-# helper it needs, and _prog32.exe is the real 32-bit app.
-cp "$ROOT/dist/vdlaunch.exe"         "$WORK_DIR/s6/prog32.exe"
-cp "$ROOT/dist-test/vdlaunch32c.exe" "$WORK_DIR/s6/vdlaunch32.exe"
-cp "$WORK_DIR/bin32/mock.exe"        "$WORK_DIR/s6/_prog32.exe"
-cat > "$WORK_DIR/s6/run.bat" <<EOF
-@echo off
-set "VDLAUNCH_TEST_OUT=$(winpath 's6/o.txt')"
-set "VDLAUNCH_TEST_TAG=s6"
-start /wait "" prog32.exe hello world
-echo %ERRORLEVEL% > exitcode.txt
+cp "$ROOT/dist-test/vdlaunch64c.exe" "$WORK_DIR/s6/launcher.exe"
+cp "$WORK_DIR/bin32/mock.exe"        "$WORK_DIR/s6/target32.exe"
+cp "$WORK_DIR/bin64/mock.exe"        "$WORK_DIR/s6/target64.exe"
+cat > "$WORK_DIR/s6/vdlaunch.ini" <<'EOF'
+[launch]
+target = target32.exe
+desktop_off = 1
 EOF
+TESTTAG=s6a write_runner "$WORK_DIR/s6" launcher.exe "$(winpath 's6/o32.txt')" from-32bit
 run_scenario "$WORK_DIR/s6" >/dev/null
-sleep 1
-OUT=$(tr -d '\r' < "$WORK_DIR/s6/o.txt" 2>/dev/null)
-if [ -z "$OUT" ]; then
-  skip "6.x 32-bit auto dispatch" "no output captured"
-else
-  contains "6.1 32-bit target reached via dispatcher" "$OUT" "=== s6 ==="
-  contains "6.2 args survive dispatch"                "$OUT" "arg1=[hello]"
-  contains "6.3 second arg survives dispatch"         "$OUT" "arg2=[world]"
-fi
+OUT=$(tr -d '\r' < "$WORK_DIR/s6/o32.txt" 2>/dev/null)
+contains "6.1 x64 launcher runs a 32-bit target" "$OUT" "=== s6a ==="
+contains "6.2 args reach the 32-bit target"      "$OUT" "arg1=[from-32bit]"
+
+cat > "$WORK_DIR/s6/vdlaunch.ini" <<'EOF'
+[launch]
+target = target64.exe
+desktop_off = 1
+EOF
+TESTTAG=s6b write_runner "$WORK_DIR/s6" launcher.exe "$(winpath 's6/o64.txt')" from-64bit
+run_scenario "$WORK_DIR/s6" >/dev/null
+OUT=$(tr -d '\r' < "$WORK_DIR/s6/o64.txt" 2>/dev/null)
+contains "6.3 x64 launcher runs a 64-bit target" "$OUT" "=== s6b ==="
 
 # ---------------------------------------------------------------- 7
 echo
@@ -312,6 +314,23 @@ EOF
   check    "8b.2 a new desktop was created"           "${NEWCOUNT:-x}" "$((COUNTV+1))"
   check    "8b.3 launch stayed in the background"     "$(diag_current)" "$CURRENT"
   contains "8b.4 window moved off the current desktop" "$OUT" "onCurrentDesktop=0"
+
+  # 8b2: a 32-bit target's window must land on the requested desktop too
+  fresh s8b2
+  cp "$ROOT/dist-test/vdlaunch64c.exe" "$WORK_DIR/s8b2/launcher.exe"
+  cp "$WORK_DIR/bin32/mock.exe"        "$WORK_DIR/s8b2/target32.exe"
+  cat > "$WORK_DIR/s8b2/vdlaunch.ini" <<'EOF'
+[launch]
+target = target32.exe
+desktop = new
+switch = false
+EOF
+  TESTTAG=s8b2 TESTGUI=1 write_runner "$WORK_DIR/s8b2" launcher.exe "$(winpath 's8b2/o.txt')"
+  run_scenario "$WORK_DIR/s8b2" >/dev/null
+  OUT=$(tr -d '\r' < "$WORK_DIR/s8b2/o.txt" 2>/dev/null)
+  contains "8b2.1 32-bit GUI target launched"        "$OUT" "=== s8b2 ==="
+  contains "8b2.2 32-bit window moved off current"   "$OUT" "onCurrentDesktop=0"
+  check    "8b2.3 launcher stayed in background"     "$(diag_current)" "$CURRENT"
 
   fresh s8c
   cp "$ROOT/dist-test/vdlaunch64c.exe" "$WORK_DIR/s8c/launcher.exe"

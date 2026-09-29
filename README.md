@@ -2,13 +2,13 @@
 
 **Launch any Windows program on a chosen virtual desktop — by just renaming it.**
 
-No shortcuts to edit, no flags to remember, no wrapper scripts. Rename your app to
-`_yourApp.exe`, drop `vdlaunch.exe` in its place, and every launch lands where
-`vdlaunch.ini` says. Arguments pass through untouched.
+No shortcuts to edit, no flags to remember, no wrapper scripts, no helper files.
+Rename your app to `_yourApp.exe`, drop the launcher in its place, and every launch
+lands where `vdlaunch.ini` says. Arguments pass through untouched.
 
 ```
 yourApp.exe          ->  _yourApp.exe       (the real app)
-vdlaunch.exe         ->  yourApp.exe        (the wrapper)
+vdlaunch64.exe       ->  yourApp.exe        (the wrapper)
 vdlaunch.ini                                (which desktop to use)
 ```
 
@@ -43,10 +43,9 @@ in a config file next to it.
 
 ## Quick start
 
-1. Grab `vdlaunch64.exe` (or `vdlaunch32.exe` for 32-bit apps) from
-   [Releases](../../releases) — or use `vdlaunch.exe`, which picks the right one.
+1. Grab `vdlaunch64.exe` from [Releases](../../releases). It handles 32-bit apps too.
 2. In your app's folder, rename `app.exe` → `_app.exe`.
-3. Copy `vdlaunch.exe` in and rename it to `app.exe`.
+3. Copy `vdlaunch64.exe` in and rename it to `app.exe`.
 4. Optional: copy `vdlaunch.ini.example` next to it as `vdlaunch.ini` and set `desktop`.
 
 That's it. No config is required.
@@ -151,15 +150,18 @@ see what a silent wrapper did.
 
 | File | Use |
 | --- | --- |
-| `vdlaunch64.exe` | x64 targets — rename over `yourApp.exe` |
-| `vdlaunch32.exe` | 32-bit targets — rename over `yourApp.exe` |
-| `vdlaunch.exe` | Auto: reads the target's PE header and hands a 32-bit app to `vdlaunch32.exe`. Keep both helpers beside it. |
+| `vdlaunch64.exe` | Use this unless you have a reason not to |
+| `vdlaunch32.exe` | Same features, x86 host |
+
+**No helper files.** Either build launches and places targets of *any* bitness,
+because every desktop call goes through explorer's COM server rather than the
+target's own process. A 64-bit `vdlaunch` wraps 32-bit apps, and vice versa.
 
 Build from WSL/Linux with mingw-w64:
 
 ```sh
 sudo pacman -S mingw-w64-gcc      # or: apt install g++-mingw-w64-x86-64 g++-mingw-w64-i686
-make                              # dist/vdlaunch64.exe, vdlaunch32.exe, vdlaunch.exe
+make                              # dist/vdlaunch64.exe, vdlaunch32.exe
 make console                      # console-subsystem twins for scripting/tests
 make test                         # full scenario suite (needs a Windows desktop session)
 ```
@@ -189,13 +191,17 @@ This project pins them down empirically for build 26100/26200. Reached through
 Slots count `IUnknown`'s three entries. `tools/` keeps the probe programs used to
 discover them, each validated by observing the real effect (a desktop actually
 changes, a window actually moves) rather than trusting an `HRESULT`.
+
+Because these calls run on the shell's side, they work on a window belonging to
+any process — including one of a different bitness — which is why a single
+launcher binary is enough for 32-bit and 64-bit targets alike.
 </details>
 
 ## Limitations
 
 - Windows 10/11 only. Without a virtual-desktop manager the app still launches, just on the current desktop.
 - Background mode needs the app to open a window within `window_timeout`; single-instance apps are better served by `switch = true`.
-- The auto build needs `vdlaunch32.exe` next to it when wrapping a 32-bit app.
+- Placement is per-window, so an app that hands off to an already-running process is better served by `switch = true`.
 
 ## Credits
 
