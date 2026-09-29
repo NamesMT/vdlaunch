@@ -197,6 +197,28 @@ any process — including one of a different bitness — which is why a single
 launcher binary is enough for 32-bit and 64-bit targets alike.
 </details>
 
+## Windows support
+
+Selecting a desktop works by calling the shell's internal manager, and Windows
+revisions that interface at different vtable layouts. This release is verified
+slot-by-slot on **build 26100 / 26200** (Windows 11 24H2 / 25H2).
+
+| Build | Behaviour |
+| --- | --- |
+| 26100+ | Full support: create, switch, move, remove |
+| Older | Launches onto a **desktop that already exists**; refuses to create or switch, and logs why |
+
+Nothing crashes on older builds — the app still starts, on the current desktop,
+with an explanatory dialog unless `quiet = true`. `--diag` reports exactly which
+interface and slot table were detected, so an older build can be supported by
+sending that output. There is also `experimental_layout = true`, which tries the
+slot tables published by reference implementations for those revisions; it is off
+by default because a wrong slot **faults** rather than failing softly.
+
+```ini
+experimental_layout = true   ; older builds only, test before trusting
+```
+
 ## Limitations
 
 - Windows 10/11 only. Without a virtual-desktop manager the app still launches, just on the current desktop.

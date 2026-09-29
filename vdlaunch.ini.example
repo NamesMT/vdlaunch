@@ -47,3 +47,10 @@ desktop = 3
 
 [apps.*--new-window*]
 desktop = +1
+
+; Older Windows builds use a different internal interface revision, whose slot
+; layout this release has not been verified against. vdlaunch then keeps to the
+; operations proven stable there: launching onto a desktop that already exists.
+; Set this to true to try the reference slot tables for those builds. A wrong
+; slot faults rather than failing softly, so test before trusting it.
+; experimental_layout = false

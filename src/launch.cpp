@@ -204,6 +204,7 @@ int run(const Config& cfg, const std::wstring& raw_command_line) {
 
   int wanted = 0;
   bool want_window_move = false;
+  if (cfg.has_desktop) vd::set_allow_unverified_slots(cfg.experimental_layout);
   if (cfg.has_desktop && vd::init()) {
     ResolvedDesktop rd = vd::resolve(cfg.desktop, cfg.create);
     if (!rd.ok) {

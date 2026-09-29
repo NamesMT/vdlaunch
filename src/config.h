@@ -25,6 +25,7 @@ struct Config {
   CwdMode  cwd    = CwdMode::Target;
   std::wstring cwd_custom;
   int  window_timeout_ms = 15000;
+  bool experimental_layout = false;  // allow unverified slot tables on older builds
   bool log = true;
   bool quiet = false;
 

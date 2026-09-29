@@ -169,6 +169,20 @@ std::vector<std::string> split(const std::string& s, char sep) {
   return out;
 }
 
+// RtlGetVersion reports the real build even when the app is manifested for
+// an older Windows; GetVersionEx does not.
+int windows_build() {
+  typedef LONG(WINAPI* PFN_RtlGetVersion)(PRTL_OSVERSIONINFOW);
+  HMODULE ntdll = GetModuleHandleW(L"ntdll.dll");
+  if (!ntdll) return -1;
+  auto fn = reinterpret_cast<PFN_RtlGetVersion>(reinterpret_cast<void*>(GetProcAddress(ntdll, "RtlGetVersion")));
+  if (!fn) return -1;
+  RTL_OSVERSIONINFOW vi = {};
+  vi.dwOSVersionInfoSize = sizeof(vi);
+  if (fn(&vi) != 0) return -1;
+  return (int)vi.dwBuildNumber;
+}
+
 bool glob_match(const std::wstring& pat, const std::wstring& txt) {
   size_t p = 0, t = 0, star = std::wstring::npos, mark = 0;
   while (t < txt.size()) {

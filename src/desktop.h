@@ -12,6 +12,19 @@ struct DesktopInfo {
 
 // True when this OS exposes the internal virtual-desktop manager we use.
 bool  available();
+
+struct EngineInfo {
+  int          build = -1;       // Windows build, -1 when unknown
+  std::wstring iid;              // matched IVirtualDesktopManagerInternal IID
+  std::wstring layout;           // candidate slot table in use, for bug reports
+  bool         can_create = false;   // verified slot for CreateDesktopW
+  bool         can_switch = false;   // verified slot for SwitchDesktop
+  bool         can_remove = false;   // verified slot for RemoveDesktop
+};
+const EngineInfo& engine_info();
+// Slot tables for revisions this build has never run against a real OS. Off by
+// default because a wrong slot faults rather than failing softly.
+void set_allow_unverified_slots(bool on);
 // Initializes COM and resolves the manager. Safe to call repeatedly.
 bool  init();
 void  shutdown();

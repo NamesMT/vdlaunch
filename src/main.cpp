@@ -107,8 +107,18 @@ int main() {
     attach_parent_console();
     printf("vdlaunch %s diagnostics\n", kVersion);
     printf("launcher      : %s\n", utf8(exe_path()).c_str());
+    vd::set_allow_unverified_slots(cfg.experimental_layout);
     bool ok = vd::init();
     printf("virtual desktops: %s\n", ok ? "available" : "UNAVAILABLE");
+    if (ok) {
+      const vd::EngineInfo& ei = vd::engine_info();
+      printf("windows build : %d\n", ei.build);
+      printf("interface     : %s\n", utf8(ei.iid).c_str());
+      printf("slot table    : %s\n", utf8(ei.layout).c_str());
+      printf("create/switch : %s%s\n",
+             ei.can_create ? "supported" : "NOT verified on this build",
+             ei.can_switch ? "" : " (launches will not switch desktops)");
+    }
     if (ok) {
       printf("desktop count : %d\n", vd::count());
       printf("current       : %d\n", vd::current_index());

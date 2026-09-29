@@ -27,3 +27,4 @@ bool iequals(const std::string& a, const std::string& b);
 bool iequalsw(const std::wstring& a, const std::wstring& b);
 std::vector<std::string> split(const std::string& s, char sep);
 bool glob_match(const std::wstring& pattern, const std::wstring& text);
+int  windows_build();

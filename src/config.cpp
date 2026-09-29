@@ -115,6 +115,8 @@ static void apply_section(Config& cfg, const IniSection& s) {
       else if (!t.empty()) { cfg.cwd = CwdMode::Custom; cfg.cwd_custom = wide(v); }
     } else if (k == "window_timeout" || k == "window_timeout_ms") {
       cfg.window_timeout_ms = std::max(0, atoi(v.c_str()));
+    } else if (k == "experimental_layout") {
+      cfg.experimental_layout = truthy(v, cfg.experimental_layout);
     } else if (k == "log") {
       cfg.log = truthy(v, cfg.log);
     } else if (k == "quiet") {

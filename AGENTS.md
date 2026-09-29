@@ -6,7 +6,7 @@ Rules for agents working in this repo.
 - The Makefile tracks `src/*.h`, but enum/struct changes still warrant `make clean` when a build looks stale.
 - Never trust an `HRESULT` from the internal COM manager: a wrong vtable slot faults or silently no-ops. Verify by effect (desktop count changed, window moved).
 - The launcher talks to explorer, not to the target, so it places windows of any bitness. Keep it that way: no same-bitness helper.
-- Vtable slots in `src/desktop.cpp` are validated for Windows 11 build 26100/26200 only. Re-probe with `tools/probe_*.cpp` on any other build before editing them.
+- Vtable slots in `src/desktop.cpp` are validated for Windows 11 build 26100/26200 only; unverified slot tables stay behind `experimental_layout` because a wrong slot faults. Re-probe with `tools/probe_*.cpp` on any other build before editing them.
 - `test/run.sh` drives the real Windows host through cmd.exe interop and needs a live desktop session; it restores the desktop count when it finishes.
 - Keep passthrough byte-exact: never re-quote or reorder the wrapped app's arguments.
 MDEOF
