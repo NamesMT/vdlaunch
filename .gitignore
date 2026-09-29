@@ -1,0 +1,6 @@
+build/
+dist-test/
+*.log
+*.o
+*.exe
+!dist/*.exe
